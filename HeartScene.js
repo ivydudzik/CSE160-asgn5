@@ -11,6 +11,7 @@ let renderer;
 let camera;
 let scene;
 
+// DYNAMIC OBJECTS
 let cubes = [];
 let heart;
 let defaultHeartScale = 0.05;
@@ -19,12 +20,13 @@ function main() {
     // CANVAS & RENDERER
     canvas = document.querySelector('#c');
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
+    renderer.shadowMap.enabled = true;
 
     // CAMERA DATA
     const fov = 75;
     const aspect = 2;  // the canvas default
     const near = 0.1;
-    const far = 100;
+    const far = 1000;
 
     // CREATE CAMERA
     camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
@@ -57,7 +59,7 @@ function main() {
 
     /// LIGHTS ///
 
-    // POINT LIGHT
+    // YELLOW POINT LIGHT
     {
         // Light Data
         const color = 0xFFF11F;
@@ -69,6 +71,27 @@ function main() {
         light.position.set(-1, 4, 4);
         scene.add(light);
     }
+
+    // HEART POINT LIGHT
+    {
+        // Light Data
+        const color = 0xFF1111;
+        const intensity = 1000;
+        const distance = 100;
+
+        // Create Light
+        const light = new THREE.PointLight(color, intensity, distance);
+        light.castShadow = true;
+        light.near = 0.1;
+        light.far = 1000;
+        light.position.set(0, 6, 0);
+        scene.add(light);
+
+        // Create Helper
+        const helper = new THREE.PointLightHelper(light);
+        scene.add(helper);
+    }
+
 
 
     // SKYLIGHT
@@ -112,41 +135,74 @@ function main() {
     ];
 
 
-    // PLANE
-    {
+    // // PLANE
+    // {
 
-        const planeSize = 40;
+    //     const planeSize = 40;
 
-        // const loader = new THREE.TextureLoader();
-        // const texture = loader.load('https://threejs.org/manual/examples/resources/images/checker.png');
-        // texture.colorSpace = THREE.SRGBColorSpace;
-        // texture.wrapS = THREE.RepeatWrapping;
-        // texture.wrapT = THREE.RepeatWrapping;
-        // texture.magFilter = THREE.NearestFilter;
-        // const repeats = planeSize / 2;
-        // texture.repeat.set(repeats, repeats);
+    //     const loader = new THREE.TextureLoader();
+    //     const texture = loader.load('https://threejs.org/manual/examples/resources/images/checker.png');
+    //     texture.colorSpace = THREE.SRGBColorSpace;
+    //     texture.wrapS = THREE.RepeatWrapping;
+    //     texture.wrapT = THREE.RepeatWrapping;
+    //     texture.magFilter = THREE.NearestFilter;
+    //     const repeats = planeSize / 2;
+    //     texture.repeat.set(repeats, repeats);
 
-        const color = 0x080401;
-        const flatMaterial = new THREE.MeshPhongMaterial({
-            color,
-            side: THREE.DoubleSide
-        });
+    //     const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize);
+    //     const planeMat = new THREE.MeshPhongMaterial({
+    //         map: texture,
+    //         side: THREE.DoubleSide,
+    //     });
+    //     const mesh = new THREE.Mesh(planeGeo, planeMat);
+    //     mesh.receiveShadow = true;
 
-        const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize);
-        // const planeMat = new THREE.MeshPhongMaterial({
-        //     map: texture,
-        //     side: THREE.DoubleSide,
-        // });
-        const mesh = new THREE.Mesh(planeGeo, flatMaterial);
-        mesh.rotation.x = Math.PI * - .5;
-        scene.add(mesh);
+    //     mesh.rotation.x = Math.PI * - .5;
+    //     mesh.position.set(0, -5, 0);
+    //     scene.add(mesh);
 
-    }
+    // }
 
     /// OBJECTS ///
 
+    // CAVE MESH
+    // Cave (Part 1 of 3) by Danni Bittman [CC-BY] (https://creativecommons.org/licenses/by/3.0/) via Poly Pizza (https://poly.pizza/m/5RlkbcRZiP1)
+    {
+        const mtlLoader = new MTLLoader();
+        mtlLoader.load('Assets/Cave/materials.mtl', (mtl) => {
+
+            mtl.preload();
+            const objLoader = new OBJLoader();
+            objLoader.setMaterials(mtl);
+            objLoader.load('Assets/Cave/model.obj', (cave_obj) => {
+                cave_obj.scale.set(45, 45, 45);
+                cave_obj.position.set(0, 5.5, 0);
+                cave_obj.traverse(function (child) { child.receiveShadow = true; });
+                scene.add(cave_obj);
+            });
+
+        });
+    }
+
+
     // CAGE MESH
     // Cage Medieval by hat_my_guy (https://poly.pizza/m/mybhRIyuL9)
+    {
+        const mtlLoader = new MTLLoader();
+        mtlLoader.load('Assets/Cage/Cage.mtl', (mtl) => {
+
+            mtl.preload();
+            const objLoader = new OBJLoader();
+            objLoader.setMaterials(mtl);
+            objLoader.load('Assets/Cage/Cage.obj', (cage_obj) => {
+                cage_obj.scale.set(2, 2, 2);
+                cage_obj.position.set(0, 5.5, 0);
+                cage_obj.traverse(function (child) { child.castShadow = true; });
+                scene.add(cage_obj);
+            });
+
+        });
+    }
 
     // HEART MESH (From Google Poly)
     {
@@ -158,8 +214,8 @@ function main() {
             objLoader.setMaterials(mtl);
             objLoader.load('Assets/Heart/1410 Heart.obj', (heart_obj) => {
                 heart = heart_obj;
-                heart.scale.set(0.05, 0.05, 0.05)
-                heart.position.set(0, 4, 0)
+                heart.scale.set(0.05, 0.05, 0.05);
+                heart.position.set(0, 4, 0);
                 scene.add(heart);
             });
 
@@ -193,7 +249,8 @@ function makeInstance(geometry, color, x) {
     const material = new THREE.MeshPhongMaterial({ color });
 
     const cube = new THREE.Mesh(geometry, material);
-    // scene.add(cube);
+    cube.castShadow = true;
+    scene.add(cube);
 
     cube.position.x = x;
     cube.position.y = 1;
@@ -204,12 +261,12 @@ function makeInstance(geometry, color, x) {
 function render(time) {
     time *= 0.001;  // convert time to seconds
 
-    // cubes.forEach((cube, ndx) => {
-    //     const speed = 1 + ndx * .1;
-    //     const rot = time * speed;
-    //     cube.rotation.x = rot;
-    //     cube.rotation.y = rot;
-    // });
+    cubes.forEach((cube, ndx) => {
+        const speed = 1 + ndx * .1;
+        const rot = time * speed;
+        cube.rotation.x = rot;
+        cube.rotation.y = rot;
+    });
 
     /// HEART ANIMATION ///
     // Change heart scale over time
