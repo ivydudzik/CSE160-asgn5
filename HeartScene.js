@@ -5,14 +5,29 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { RenderPixelatedPass } from 'three/addons/postprocessing/RenderPixelatedPass.js';
+import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
+import { AfterimagePass } from 'three/addons/postprocessing/AfterimagePass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+
+
 let canvas;
 let renderer;
+
+let composer;
+let pixelPass;
+let filmPass;
+let afterimagePass;
+let outputPass;
 
 let camera;
 let scene;
 
 // DYNAMIC OBJECTS
-let cubes = [];
+let shapes = [];
 let heart;
 let defaultHeartScale = 0.05;
 
@@ -39,6 +54,45 @@ function main() {
 
     // SCENE
     scene = new THREE.Scene();
+
+    /// POSTPROCESSING ///
+
+    // COMPOSER
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+
+    // PIXELATE
+    pixelPass = new RenderPixelatedPass(
+        3,     // pixel size
+        scene,
+        camera
+    );
+    composer.addPass(pixelPass);
+
+    // FILMIC
+    filmPass = new FilmPass(
+        1,   // intensity
+        false,  // grayscale
+    );
+    composer.addPass(filmPass);
+
+    // AFTERIMAGE
+    afterimagePass = new AfterimagePass(0.75
+    );
+    composer.addPass(afterimagePass);
+
+    // OUTPUT
+    outputPass = new OutputPass();
+    composer.addPass(outputPass);
+
+    // FOG
+    {
+        const near = 25;
+        const far = 150;
+        const color = 'black';
+        scene.fog = new THREE.Fog(color, near, far);
+        scene.background = new THREE.Color(color);
+    }
 
     // SKYBOX
     {
@@ -86,10 +140,6 @@ function main() {
         light.far = 1000;
         light.position.set(0, 6, 0);
         scene.add(light);
-
-        // Create Helper
-        const helper = new THREE.PointLightHelper(light);
-        scene.add(helper);
     }
 
 
@@ -119,20 +169,29 @@ function main() {
 
     /// PRIMITIVES ///
 
-    // CUBE 
+    // SHAPE ARRAY 
 
-    // Cube Data
+    // Cube 
     const boxWidth = 1;
     const boxHeight = 1;
     const boxDepth = 1;
     const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
 
-    // Create Multiple Cubes
-    cubes = [
+    // Sphere 
+    const sphereDiameter = 0.70;
+    const sphereGeometry = new THREE.SphereGeometry(sphereDiameter);
+
+    // Cone
+    const coneGeometry = new THREE.ConeGeometry(sphereDiameter, boxHeight);
+
+    // Create Multiple Shapes
+    shapes = [
         makeInstance(geometry, 0x44aa88, 0),
-        makeInstance(geometry, 0x8844aa, -2),
-        makeInstance(geometry, 0xaa8844, 2),
+        makeInstance(sphereGeometry, 0x8844aa, -2),
+        makeInstance(coneGeometry, 0xaa8844, 2),
     ];
+
+
 
 
     // // PLANE
@@ -225,6 +284,7 @@ function main() {
     // Set Window Size & Aspect
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    composer.setSize(window.innerWidth, window.innerHeight);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -240,6 +300,7 @@ function onWindowResize() {
 
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    composer.setSize(window.innerWidth, window.innerHeight);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -258,14 +319,17 @@ function makeInstance(geometry, color, x) {
     return cube;
 }
 
+let lastTime = 0;
 function render(time) {
     time *= 0.001;  // convert time to seconds
+    const deltaTime = time - lastTime;
+    lastTime = time;
 
-    cubes.forEach((cube, ndx) => {
+    shapes.forEach((shape, ndx) => {
         const speed = 1 + ndx * .1;
         const rot = time * speed;
-        cube.rotation.x = rot;
-        cube.rotation.y = rot;
+        shape.rotation.x = rot;
+        shape.rotation.y = rot;
     });
 
     /// HEART ANIMATION ///
@@ -280,7 +344,7 @@ function render(time) {
         if (heartScale) { heart.scale.set(heartScale, (heartScale + 0.15) / 4, heartScale); }
     }
 
-    renderer.render(scene, camera);
+    composer.render(deltaTime);
 
     requestAnimationFrame(render);
 }
