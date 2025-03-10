@@ -12,6 +12,8 @@ import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
 import { AfterimagePass } from 'three/addons/postprocessing/AfterimagePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
+import { getParticleSystem } from "./Assets/Simple-Particle-Effects-main/getParticleSystem.js";
+
 
 
 let canvas;
@@ -28,13 +30,17 @@ let scene;
 
 // DYNAMIC OBJECTS
 let shapes = [];
+let rocks = [];
 let heart;
 let defaultHeartScale = 0.05;
+let fireEffect;
 
 function main() {
     // CANVAS & RENDERER
     canvas = document.querySelector('#c');
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
 
     // CAMERA DATA
@@ -186,41 +192,59 @@ function main() {
 
     // Create Multiple Shapes
     shapes = [
-        makeInstance(geometry, 0x44aa88, 0),
-        makeInstance(sphereGeometry, 0x8844aa, -2),
-        makeInstance(coneGeometry, 0xaa8844, 2),
+        makeShapeInstance(geometry, 0x44aa88, -2),
+        makeShapeInstance(sphereGeometry, 0x88141a, 0),
+        makeShapeInstance(coneGeometry, 0xaa8844, 2),
     ];
 
+    // CAVE ENTRANCE CONES
+    {
 
+        const coneHeight = 3;
+        const coneDiameter = 2;
+        const coneRockGeometry = new THREE.ConeGeometry(coneDiameter, coneHeight);
 
+        const loader = new THREE.TextureLoader();
+        const coneRockTexture = loader.load('Assets/Rock/lichen_rock_diff_1k.jpg');
+        const coneRockBumpMap = loader.load('Assets/Rock/lichen_rock_disp_1k.png');
+        coneRockTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // // PLANE
-    // {
+        let coneCount = 9;
+        let conesDistance = 20;
+        let conesScale = 5;
 
-    //     const planeSize = 40;
+        let entrancePosition = [0, 9, -90];
+        // Create Multiple Cones Around Entrance
+        for (let i = 0; i < coneCount; i++) {
+            // Create Rock Cone
+            let rock = makeRockInstance(coneRockGeometry, coneRockTexture, coneRockBumpMap);
+            // Place it in a circle around entrance
+            rock.position.set(entrancePosition[0] + (Math.cos((6.28 / coneCount) * i) * conesDistance), entrancePosition[1] + (Math.sin((6.28 / coneCount) * i) * conesDistance), entrancePosition[2]);
+            // Rotate it to face inwards with some random deviation
+            rock.rotateZ((6.28 / coneCount) * i + 3.14 / 2 + (Math.random() - 0.5));
+            // Scale it up
+            rock.scale.set(conesScale, 1.5 * conesScale, conesScale);
+            rocks.push(rock);
+        }
 
-    //     const loader = new THREE.TextureLoader();
-    //     const texture = loader.load('https://threejs.org/manual/examples/resources/images/checker.png');
-    //     texture.colorSpace = THREE.SRGBColorSpace;
-    //     texture.wrapS = THREE.RepeatWrapping;
-    //     texture.wrapT = THREE.RepeatWrapping;
-    //     texture.magFilter = THREE.NearestFilter;
-    //     const repeats = planeSize / 2;
-    //     texture.repeat.set(repeats, repeats);
+        coneCount = 9;
+        conesDistance = 25;
+        conesScale = 5;
 
-    //     const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize);
-    //     const planeMat = new THREE.MeshPhongMaterial({
-    //         map: texture,
-    //         side: THREE.DoubleSide,
-    //     });
-    //     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    //     mesh.receiveShadow = true;
-
-    //     mesh.rotation.x = Math.PI * - .5;
-    //     mesh.position.set(0, -5, 0);
-    //     scene.add(mesh);
-
-    // }
+        entrancePosition = [0, 9, 75];
+        // Create Multiple Cones Around Entrance
+        for (let i = 0; i < coneCount; i++) {
+            // Create Rock Cone
+            let rock = makeRockInstance(coneRockGeometry, coneRockTexture, coneRockBumpMap);
+            // Place it in a circle around entrance
+            rock.position.set(entrancePosition[0] + (Math.cos((6.28 / coneCount) * i) * conesDistance), entrancePosition[1] + (Math.sin((6.28 / coneCount) * i) * conesDistance), entrancePosition[2]);
+            // Rotate it to face inwards with some random deviation
+            rock.rotateZ((6.28 / coneCount) * i + 3.14 / 2 + (Math.random() - 0.5));
+            // Scale it up
+            rock.scale.set(conesScale, 1.5 * conesScale, conesScale);
+            rocks.push(rock);
+        }
+    }
 
     /// OBJECTS ///
 
@@ -276,10 +300,21 @@ function main() {
                 heart.scale.set(0.05, 0.05, 0.05);
                 heart.position.set(0, 4, 0);
                 scene.add(heart);
+
+                /// PARTICLES 
+
+                fireEffect = getParticleSystem({
+                    camera,
+                    emitter: heart,
+                    parent: scene,
+                    rate: 10.0,
+                    texture: 'Assets/Simple-Particle-Effects-main/img/circle.png',
+                });
             });
 
         });
     }
+
 
     // Set Window Size & Aspect
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -306,17 +341,26 @@ function onWindowResize() {
 
 }
 
-function makeInstance(geometry, color, x) {
+function makeShapeInstance(geometry, color, x) {
     const material = new THREE.MeshPhongMaterial({ color });
 
-    const cube = new THREE.Mesh(geometry, material);
-    cube.castShadow = true;
-    scene.add(cube);
+    const shape = new THREE.Mesh(geometry, material);
+    shape.castShadow = true;
+    scene.add(shape);
 
-    cube.position.x = x;
-    cube.position.y = 1;
+    shape.position.x = x;
+    shape.position.y = 1;
 
-    return cube;
+    return shape;
+}
+
+function makeRockInstance(geometry, texture, bump) {
+    const material = new THREE.MeshPhongMaterial({ map: texture, bumpMap: bump });
+
+    const cone = new THREE.Mesh(geometry, material);
+    scene.add(cone);
+
+    return cone;
 }
 
 let lastTime = 0;
@@ -342,7 +386,10 @@ function render(time) {
     // Set scale if heart asset is loaded
     if (heart) {
         if (heartScale) { heart.scale.set(heartScale, (heartScale + 0.15) / 4, heartScale); }
+        fireEffect.update(deltaTime);
     }
+
+
 
     composer.render(deltaTime);
 
