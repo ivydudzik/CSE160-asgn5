@@ -5,4 +5,8 @@
 ddudzik@ucsc.edu
 
 ### Notes to Grader:
-
+Extras: 
+- Shadows
+- Particles
+- Post-processing
+- Fog
