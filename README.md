@@ -1,12 +1,7 @@
-# CSE160-asgn5 - "three.js Demo"
-"three.js Demo" program code completed by Ivy Dudzik as part of James Davis' CSE 160 class.
+# Three.js Demo
+"three.js Demo" program code completed by Ivy Dudzik as an expansion on requirements from James Davis' CSE 160 class.
 
-### Ivy Dudzik
-ddudzik@ucsc.edu
-
-### Notes to Grader:
-Extras: 
-- Shadows
-- Particles
-- Post-processing
-- Fog
+Prior WebGL Projects:
+[https://github.com/ivydudzik/CSE160-asgn2](https://github.com/ivydudzik/CSE160-asgn2)
+[https://github.com/ivydudzik/CSE160-asgn3](https://github.com/ivydudzik/CSE160-asgn3)
+[https://github.com/ivydudzik/CSE160-asgn4](https://github.com/ivydudzik/CSE160-asgn4)
